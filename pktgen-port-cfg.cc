@@ -46,7 +46,7 @@ struct rte_eth_conf port_conf = {
     .rxmode = {
 #if RTE_VERSION_NUM >= RTE_VERSION_NUM(21, 11, 0, 0)
         .mq_mode        = RTE_ETH_MQ_RX_RSS,
-#else if RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
+#elif RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
         .mq_mode        = ETH_MQ_RX_RSS,
 #endif
         .split_hdr_size = 0,
@@ -193,7 +193,8 @@ void pktgen_config_ports(void) {
 	uint32_t pid;
 	int32_t ret, cache_size;
     uint16_t nb_core;
-    // struct rte_ether_addr addr;
+    struct rte_ether_addr addr;
+    char buf[RTE_ETHER_ADDR_FMT_SIZE];
     struct rte_eth_dev_info dev_info;
 
     cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
@@ -210,11 +211,17 @@ void pktgen_config_ports(void) {
     RTE_ETH_FOREACH_DEV(pid) {
         printf("Initialize Port %d -- TxQ %d, RxQ %d\n", pid, nb_core, nb_core);
 
+		ret = rte_eth_macaddr_get(pid, &addr);
+        rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, &addr);
+        printf("\tMAC address: %s\n", buf);
+
     	/* Get Ethernet device info */
         ret = rte_eth_dev_info_get(pid, &dev_info);
 	    if (ret < 0) {
             printf("Error during getting device (port %u) info: %s\n", pid, strerror(-ret));
         }
+
+        port_conf.rx_adv_conf.rss_conf.rss_hf &= dev_info.flow_type_rss_offloads;
 
         /* Configure # of RX and TX queue for port */
         ret = rte_eth_dev_configure(pid, nb_core, nb_core, &port_conf);

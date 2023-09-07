@@ -76,7 +76,7 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
 
 #if RTE_VERSION_NUM >= RTE_VERSION_NUM(21, 11, 0, 0)
     tx_pkt->ol_flags = RTE_MBUF_F_TX_UDP_CKSUM | RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_IPV4;
-#else if RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
+#elif RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
     tx_pkt->ol_flags = DEV_TX_OFFLOAD_UDP_CKSUM | DEV_TX_OFFLOAD_IPV4_CKSUM;
 #endif
 
