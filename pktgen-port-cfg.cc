@@ -44,7 +44,11 @@ static struct rte_eth_txconf tx_conf = {
 /* Port configuration */
 struct rte_eth_conf port_conf = {
     .rxmode = {
+#if RTE_VERSION_NUM >= RTE_VERSION_NUM(21, 11, 0, 0)
         .mq_mode        = RTE_ETH_MQ_RX_RSS,
+#else if RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
+        .mq_mode        = ETH_MQ_RX_RSS,
+#endif
         .split_hdr_size = 0,
     },
     .txmode = {

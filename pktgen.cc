@@ -73,7 +73,12 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
     tx_pkt->l2_len = ETH_HLEN;
     tx_pkt->l3_len = sizeof(struct iphdr);
     tx_pkt->l4_len = sizeof(struct udphdr);
+
+#if RTE_VERSION_NUM >= RTE_VERSION_NUM(21, 11, 0, 0)
     tx_pkt->ol_flags = RTE_MBUF_F_TX_UDP_CKSUM | RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_IPV4;
+#else if RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
+    tx_pkt->ol_flags = DEV_TX_OFFLOAD_UDP_CKSUM | DEV_TX_OFFLOAD_IPV4_CKSUM;
+#endif
 
     pkt = rte_pktmbuf_mtod(tx_pkt, uint8_t *);
     memset(pkt, 0, pkt_size);

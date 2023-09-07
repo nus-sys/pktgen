@@ -162,6 +162,8 @@ public:
             default:
                 throw Exception("Operation request is not recognized!");
         }
+
+        return 0;
     }
 
 protected:
