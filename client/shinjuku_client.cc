@@ -10,6 +10,7 @@ int shinjuku_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int l
     return 0;
 }
 
-int shinjuku_client_recv(Workload * wl, struct client * cl, uint8_t * pkt, int len) {
+int shinjuku_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
+    wl->RecordReply(pkt + sizeof(struct shinjuku_message));
     return 0;
 }

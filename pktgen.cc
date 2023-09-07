@@ -126,14 +126,23 @@ void pktgen_main_transmit(uint16_t pid, uint16_t lid, uint16_t qid) {
     }
 }
 
-int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid, struct rte_mbuf * pkts_burst[], uint16_t nb_pkts) {
+int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid) {
+    struct rte_mbuf * pkts_burst[DEFAULT_PKT_BURST];
     uint16_t nb_rx;
+    uint16_t pkt_len;
+    uint8_t * pkt;
 
     /*
      * Read packet from RX queues and free the mbufs
      */
-    if ((nb_rx = rte_eth_rx_burst(pid, qid, pkts_burst, nb_pkts)) == 0) {
+    if ((nb_rx = rte_eth_rx_burst(pid, qid, pkts_burst, DEFAULT_PKT_BURST)) == 0) {
         return nb_rx;
+    }
+
+    for (int i = 0; i < nb_rx; i++) {
+        pkt = rte_pktmbuf_mtod(pkts_burst[i], uint8_t *);
+        pkt_len = pkts_burst[i]->pkt_len;
+        core_info[lid].client_ops->recv(core_info[lid].wl, pkt, pkt_len);
     }
 
     rte_pktmbuf_free_bulk(pkts_burst, nb_rx);
@@ -144,7 +153,6 @@ int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid, struct rte_mbu
 int pktgen_launch_one_lcore(void * arg __rte_unused) {
     int i;
     uint16_t lid, qid;
-    struct rte_mbuf * pkts_burst[DEFAULT_PKT_BURST];
     struct timeval curr;
     int payload_len;
     uint64_t curr_tsc;
@@ -159,6 +167,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
 
     gettimeofday(&core_info[lid].start, NULL);
 
+    printf("CPU %02d | start PKTGEN...\n", lid);
     while (true) {
         gettimeofday(&curr, NULL);
         if (curr.tv_sec > core_info[lid].start.tv_sec + 20) {
@@ -166,7 +175,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
         }
 
     	RTE_ETH_FOREACH_DEV(i) {
-            pktgen_main_receive(i, lid, qid, pkts_burst, DEFAULT_PKT_BURST);
+            pktgen_main_receive(i, lid, qid);
 
             payload_len = std::stod(pktgen.props.GetProperty("payload_len", "64"));
 
@@ -187,6 +196,9 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
             pktgen_main_transmit(i, lid, qid);
         }
     }
+
+    printf("CPU %02d | finish PKTGEN...\n", lid);
+    core_info[lid].wl->PrintResult();
 
     return 0;
 }

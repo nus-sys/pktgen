@@ -7,6 +7,6 @@ int pkvs_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int len) 
     return 0;
 }
 
-int pkvs_client_recv(Workload * wl, struct client * cl, uint8_t * pkt, int len) {
+int pkvs_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
     return 0;
 }

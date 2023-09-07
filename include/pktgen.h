@@ -96,11 +96,6 @@ enum {
 	OVERHEAD_FUDGE_VALUE    = 50,
 };
 
-struct ts {
-	uint64_t send_start;
-	uint64_t completion_time;
-};
-
 typedef struct core_info {
 	int nb_client;
     const struct client_operations * client_ops;	/**< Client operations */

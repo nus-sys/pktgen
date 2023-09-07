@@ -21,7 +21,7 @@ struct client {
 
 struct client_operations {
 	int (*send) (Workload *, struct client *, uint8_t *, int);
-	int (*recv) (Workload *, struct client *, uint8_t *, int);
+	int (*recv) (Workload *, uint8_t *, uint16_t);
 };
 
 #endif  /* _CLIENT_H_ */

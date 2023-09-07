@@ -13,7 +13,7 @@ struct shinjuku_message {
 } __attribute__((__packed__));
 
 int shinjuku_client_send(Workload *, struct client *, uint8_t *, int);
-int shinjuku_client_recv(Workload *, struct client *, uint8_t *, int);
+int shinjuku_client_recv(Workload *, uint8_t *, uint16_t);
 
 static const struct client_operations shinjuku_ops = {
     .send   = shinjuku_client_send,

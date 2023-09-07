@@ -1,11 +1,16 @@
 #ifndef _SYN_WORKLOAD_H_
 #define _SYN_WORKLOAD_H_
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <sched.h>
+#include <string.h>
+
 #include <vector>
 #include <string>
 #include <chrono>
-
-#include <string.h>
 
 #include "properties.h"
 #include "core/generator.h"
@@ -18,6 +23,11 @@ struct syn_message {
     uint64_t send_start;
     uint64_t service_time;
 } __attribute__((__packed__));
+
+struct syn_ts {
+	uint64_t send_start;
+	uint64_t completion_time;
+};
 
 class SynWorkload : public Workload {
 public:
@@ -45,13 +55,43 @@ public:
         msg->send_start = this->CurrentTime_nanoseconds();
         msg->service_time = this->NextServiceTime();
 
-        printf("Send start: %lu, service time: %lu\n", msg->send_start, msg->service_time);
+        // printf("Send start: %lu, service time: %lu\n", msg->send_start, msg->service_time);
 
         return 0;
     }
 
+    uint16_t RecordReply(uint8_t * buf) {
+        struct syn_message * msg;
+        msg = (struct syn_message *)buf;
+
+        if (nr_latency < 131072) {
+            latencies[nr_latency].send_start = msg->send_start;
+            latencies[nr_latency].completion_time = CurrentTime_nanoseconds();
+            nr_latency++;
+        }
+
+        return 0;
+    }
+
+    void PrintResult(void) {
+        uint64_t send_start, completion_time, elapsed;
+        std::ofstream result; // outs is an output stream of iostream class
+
+        result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
+
+        for (int i = 0; i < nr_latency; i++) {
+            send_start = latencies[nr_latency].send_start;
+            completion_time = latencies[nr_latency].completion_time;
+            elapsed = latencies[nr_latency].completion_time - latencies[nr_latency].send_start;
+            result << send_start << "\t" << completion_time << "\t" << elapsed << "\n";
+        }
+
+        result.close() ;    // closing the output file stream
+    }
+
     SynWorkload() :
-        service_time_generator_(NULL) {
+        nr_latency(0), service_time_generator_(NULL) {
+            latencies = (struct syn_ts *)calloc(131072, sizeof(struct syn_ts));
     }
     
     virtual ~SynWorkload() {
@@ -59,6 +99,8 @@ public:
     }
   
 protected:
+    int nr_latency;
+    struct syn_ts * latencies;
     Generator<uint64_t> *service_time_generator_;
 
 private:

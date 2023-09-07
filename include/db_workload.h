@@ -166,6 +166,14 @@ public:
         return 0;
     }
 
+    uint16_t RecordReply(uint8_t * pkt) {
+        return 0;
+    }
+
+    void PrintResult(void) {
+        
+    }
+
 protected:
     virtual void TransactionRead(uint8_t *, int);
     virtual void TransactionReadModifyWrite(uint8_t *, int);
