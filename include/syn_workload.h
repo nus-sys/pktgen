@@ -20,8 +20,8 @@
 #include "utils.h"
 
 struct syn_message {
-    uint64_t send_start;
     uint64_t service_time;
+    uint64_t send_start;
 } __attribute__((__packed__));
 
 struct syn_ts {
@@ -80,9 +80,9 @@ public:
         result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
 
         for (int i = 0; i < nr_latency; i++) {
-            send_start = latencies[nr_latency].send_start;
-            completion_time = latencies[nr_latency].completion_time;
-            elapsed = latencies[nr_latency].completion_time - latencies[nr_latency].send_start;
+            send_start = latencies[i].send_start;
+            completion_time = latencies[i].completion_time;
+            elapsed = latencies[i].completion_time - latencies[i].send_start;
             result << send_start << "\t" << completion_time << "\t" << elapsed << "\n";
         }
 

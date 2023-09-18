@@ -24,6 +24,7 @@ sources = files(
     project_name + '-main.cc',
     project_name + '-udp.cc',
     project_name + '-ip.cc',
+    project_name + '-arp.cc',
     project_name + '-ether.cc',
     project_name + '-port-cfg.cc',
     'client/shinjuku_client.cc',

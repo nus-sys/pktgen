@@ -194,7 +194,11 @@ int main(int argc, char **argv) {
 	pktgen_config_info();
 
 	/* launch per-lcore init on every lcore except initial and initial + 1 lcores */
+#if RTE_VERSION >= RTE_VERSION_NUM(20, 11, 0, 0)
 	ret = rte_eal_mp_remote_launch(pktgen_launch_one_lcore, NULL, CALL_MAIN);
+#else
+	ret = rte_eal_mp_remote_launch(pktgen_launch_one_lcore, NULL, CALL_MASTER);
+#endif
 	if (ret != 0) {
 		printf("Failed to start lcore, return %d\n", ret);
 	}

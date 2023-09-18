@@ -7,8 +7,9 @@
 #include "core/exponential_generator.h"
 #include "pktgen.h"
 #include "pktgen-info.h"
-#include "pktgen-ip.h"
 #include "pktgen-udp.h"
+#include "pktgen-ip.h"
+#include "pktgen-arp.h"
 #include "pktgen-ether.h"
 
 pktgen_t pktgen;
@@ -56,6 +57,7 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
     uint8_t * pkt;
     int next_pkt;
     int pkt_size;
+    uint8_t * payload;
 
     if (unlikely(mtab->len == DEFAULT_PKT_BURST)) {
         return;
@@ -74,17 +76,19 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
     tx_pkt->l3_len = sizeof(struct iphdr);
     tx_pkt->l4_len = sizeof(struct udphdr);
 
-#if RTE_VERSION_NUM >= RTE_VERSION_NUM(21, 11, 0, 0)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
     tx_pkt->ol_flags = RTE_MBUF_F_TX_UDP_CKSUM | RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_IPV4;
-#elif RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
+#elif RTE_VERSION >= RTE_VERSION_NUM(20, 11, 0, 0)
     tx_pkt->ol_flags = DEV_TX_OFFLOAD_UDP_CKSUM | DEV_TX_OFFLOAD_IPV4_CKSUM;
 #endif
 
     pkt = rte_pktmbuf_mtod(tx_pkt, uint8_t *);
     memset(pkt, 0, pkt_size);
 
+    payload = pkt + ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr);
+
     /* Fill payload */
-    core_info[lid].client_ops->send(core_info[lid].wl, cl, pkt, payload_len);
+    core_info[lid].client_ops->send(core_info[lid].wl, cl, payload, payload_len);
 
     tx_pkt->pkt_len = tx_pkt->data_len = pkt_size;
 
@@ -105,6 +109,7 @@ void pktgen_main_transmit(uint16_t pid, uint16_t lid, uint16_t qid) {
     int pkt_cnt = mtab->len;
 
     if (pkt_cnt > 0) {
+        printf("CPU %02d| Send %d packets\n", lid, pkt_cnt);
         int ret;
         do {
             /* Send packets until there is none in TX queue */
@@ -126,11 +131,35 @@ void pktgen_main_transmit(uint16_t pid, uint16_t lid, uint16_t qid) {
     }
 }
 
-int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid) {
+static inline uint16_t pktgen_packet_type(struct rte_mbuf * m) {
+    uint16_t ret;
+    struct rte_ether_hdr *eth;
+
+    eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+
+    ret = ntohs(eth->ether_type);
+
+    return ret;
+}
+
+static inline struct udphdr * pktgen_udp_pointer(uint8_t * p) {
+    return (struct udphdr *)(p + ETH_HLEN + sizeof(struct iphdr));
+}
+
+static inline struct iphdr * pktgen_ip_pointer(uint8_t * p) {
+    return (struct iphdr *)(p + ETH_HLEN);
+}
+
+int pktgen_main_receive(uint16_t lid, uint16_t pid, uint16_t qid) {
     struct rte_mbuf * pkts_burst[DEFAULT_PKT_BURST];
     uint16_t nb_rx;
     uint16_t pkt_len;
     uint8_t * pkt;
+    uint16_t ptype;
+    uint8_t * payload;
+    uint16_t payload_len;
+    struct udphdr * u;
+    struct iphdr * iphdr;
 
     /*
      * Read packet from RX queues and free the mbufs
@@ -139,10 +168,26 @@ int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid) {
         return nb_rx;
     }
 
+    printf("CPU %02d| Receive %d packets\n", lid, nb_rx);
+
     for (int i = 0; i < nb_rx; i++) {
+        ptype = pktgen_packet_type(pkts_burst[i]);
         pkt = rte_pktmbuf_mtod(pkts_burst[i], uint8_t *);
         pkt_len = pkts_burst[i]->pkt_len;
-        core_info[lid].client_ops->recv(core_info[lid].wl, pkt, pkt_len);
+
+        if (ptype == RTE_ETHER_TYPE_ARP) {
+            printf("Receive ARP packet\n");
+            pktgen_setup_arp(lid, pid, qid);
+        } else if (ptype == RTE_ETHER_TYPE_IPV4) {
+            iphdr = pktgen_ip_pointer(pkt);
+            u = pktgen_udp_pointer(pkt);
+            // ip4_debug_print(iphdr);
+            // udp_debug_print(u);
+            payload = pkt + ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr);
+            payload_len = pkt_len - (ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr));
+            printf("CPU %02d| Packet UDP port: %x\n", lid, ntohs(u->dest));
+            core_info[lid].client_ops->recv(core_info[lid].wl, payload, payload_len);
+        }
     }
 
     rte_pktmbuf_free_bulk(pkts_burst, nb_rx);
@@ -175,14 +220,14 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
         }
 
     	RTE_ETH_FOREACH_DEV(i) {
-            pktgen_main_receive(i, lid, qid);
+            pktgen_main_receive(lid, i, qid);
 
             payload_len = std::stod(pktgen.props.GetProperty("payload_len", "64"));
 
             curr_tsc = CurrentTime_nanoseconds();
 
-            for (int i = 0; i < info->nb_client; i++) {
-                cl = &info->clients[i];
+            for (int j = 0; j < info->nb_client; j++) {
+                cl = &info->clients[j];
                 /* Determine when is the next time to send packets */
                 if (curr_tsc >= cl->last_send + cl->interval) {
                     cl->last_send = curr_tsc;

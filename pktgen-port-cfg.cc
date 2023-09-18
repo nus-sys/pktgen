@@ -44,9 +44,9 @@ static struct rte_eth_txconf tx_conf = {
 /* Port configuration */
 struct rte_eth_conf port_conf = {
     .rxmode = {
-#if RTE_VERSION_NUM >= RTE_VERSION_NUM(21, 11, 0, 0)
+#if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
         .mq_mode        = RTE_ETH_MQ_RX_RSS,
-#elif RTE_VERSION_NUM >= RTE_VERSION_NUM(20, 11, 0, 0)
+#elif RTE_VERSION >= RTE_VERSION_NUM(20, 11, 0, 0)
         .mq_mode        = ETH_MQ_RX_RSS,
 #endif
         .split_hdr_size = 0,
@@ -115,67 +115,65 @@ void pktgen_create_flow(uint32_t rx_core) {
 	struct rte_flow_item pattern[MAX_PATTERN_NUM];
 	struct rte_flow_action action[MAX_ACTION_NUM];
 	struct rte_flow * flow = NULL;
-	struct rte_flow_action_queue queue = { .index = (uint16_t)((rx_core - 1) / 2) };
-	struct rte_flow_item_ipv4 ip_spec;
-	struct rte_flow_item_ipv4 ip_mask;
-	struct rte_flow_item_udp udp_spec;
-	struct rte_flow_item_udp udp_mask;
+	struct rte_flow_action_queue queue = { .index = (uint16_t)rx_core };
+	struct rte_flow_item_ipv4 ip_spec = {0};
+	struct rte_flow_item_ipv4 ip_mask = {0};
+	struct rte_flow_item_udp udp_spec = {0};
+	struct rte_flow_item_udp udp_mask = {0};
 	int res;
 
-	dst_port = (rx_core - 1) << 8;
+	dst_port = rx_core << 8;
+
+    memset(pattern, 0, sizeof(pattern));
+    memset(action, 0, sizeof(action));
+
+    /*
+    * set the rule attribute.
+    * in this case only ingress packets will be checked.
+    */
+    memset(&attr, 0, sizeof(struct rte_flow_attr));
+    attr.ingress = 1;
+
+    /*
+    * create the action sequence.
+    * one action only,  move packet to queue
+    */
+    action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
+    action[0].conf = &queue;
+    action[1].type = RTE_FLOW_ACTION_TYPE_END;
+
+    /*
+    * set the first level of the pattern (ETH).
+    */
+    pattern[0].type = RTE_FLOW_ITEM_TYPE_ETH;
+
+    /*
+    * setting the second level of the pattern (IP).
+    */
+    memset(&ip_spec, 0, sizeof(struct rte_flow_item_ipv4));
+    memset(&ip_mask, 0, sizeof(struct rte_flow_item_ipv4));
+    pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV4;
+    pattern[1].spec = &ip_spec;
+    pattern[1].mask = &ip_mask;
+
+    /*
+    * setting the third level of the pattern (UDP).
+    */
+    memset(&udp_spec, 0, sizeof(struct rte_flow_item_udp));
+    memset(&udp_mask, 0, sizeof(struct rte_flow_item_udp));
+    udp_spec.hdr.dst_port = htons(dst_port);
+    udp_mask.hdr.dst_port = htons(FULL_PORT_MASK);
+    pattern[2].type = RTE_FLOW_ITEM_TYPE_UDP;
+    pattern[2].spec = &udp_spec;
+    pattern[2].mask = &udp_mask;
+
+    /* the final level must be always type end */
+    pattern[3].type = RTE_FLOW_ITEM_TYPE_END;
 
 	RTE_ETH_FOREACH_DEV(pid) {
-        memset(pattern, 0, sizeof(pattern));
-        memset(action, 0, sizeof(action));
-
-        /*
-        * set the rule attribute.
-        * in this case only ingress packets will be checked.
-        */
-        memset(&attr, 0, sizeof(struct rte_flow_attr));
-        attr.ingress = 1;
-        attr.priority = 0;
-
-        /*
-        * create the action sequence.
-        * one action only,  move packet to queue
-        */
-        action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
-        action[0].conf = &queue;
-        action[1].type = RTE_FLOW_ACTION_TYPE_END;
-
-        /*
-        * set the first level of the pattern (ETH).
-        */
-        pattern[0].type = RTE_FLOW_ITEM_TYPE_ETH;
-
-        /*
-        * setting the second level of the pattern (IP).
-        */
-        memset(&ip_spec, 0, sizeof(struct rte_flow_item_ipv4));
-        memset(&ip_mask, 0, sizeof(struct rte_flow_item_ipv4));
-        pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV4;
-        pattern[1].spec = &ip_spec;
-        pattern[1].mask = &ip_mask;
-
-		/*
-		* setting the third level of the pattern (UDP).
-		*/
-		memset(&udp_spec, 0, sizeof(struct rte_flow_item_udp));
-		memset(&udp_mask, 0, sizeof(struct rte_flow_item_udp));
-		udp_spec.hdr.dst_port = htons(dst_port);
-		udp_mask.hdr.dst_port = htons(PART_PORT_MASK);
-		pattern[2].type = RTE_FLOW_ITEM_TYPE_UDP;
-		pattern[2].spec = &udp_spec;
-		pattern[2].mask = &udp_mask;
-
-        /* the final level must be always type end */
-        pattern[3].type = RTE_FLOW_ITEM_TYPE_END;
-
-		printf("Direct flow to port %x to core %d via queue %d\n", dst_port & PART_PORT_MASK, rx_core, (rx_core - 1) / 2);
-
         res = rte_flow_validate(pid, &attr, pattern, action, &error);
         if (!res) {
+    		printf("PORT %02d| Direct flow to port %x to core %d via queue %d\n", pid, dst_port & PART_PORT_MASK, rx_core, queue.index);
 retry:
             flow = rte_flow_create(pid, &attr, pattern, action, &error);
             if (!flow) {
@@ -271,10 +269,8 @@ void pktgen_config_ports(void) {
         }
     }
 
-	for (uint16_t i = 0; i < pktgen.nb_core; i++) {
-		if ((i + 1) % 2 == 0) {
-			/* Receive core */
-			pktgen_create_flow(i + 1);
-		}
+	for (uint16_t i = 0; i < nb_core; i++) {
+        /* Receive core */
+        pktgen_create_flow(i);
 	}
 }

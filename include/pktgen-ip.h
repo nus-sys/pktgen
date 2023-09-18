@@ -37,6 +37,7 @@
 #define IPH_PROTO(hdr) ((hdr)->protocol)
 #define IPH_CHKSUM(hdr) ((hdr)->check)
 
+void ip4_debug_print(struct iphdr * iphdr);
 void pktgen_ipv4_ctor(uint8_t * pkt, int tot_size);
 
 #endif  /* _PKTGEN_IP_H_ */
