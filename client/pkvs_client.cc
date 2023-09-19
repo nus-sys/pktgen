@@ -66,24 +66,7 @@ void pkvs_client_output(Workload * wl, uint64_t duration) {
         send_start = pkvs_latencies[i].send_start;
         completion_time = pkvs_latencies[i].completion_time;
         elapsed = pkvs_latencies[i].completion_time - pkvs_latencies[i].send_start;
-        switch (op_code) {
-            case READ:
-                lat_result << "READ\t";
-                break;
-            case UPDATE:
-                lat_result << "UPDATE\t";
-                break;
-            case INSERT:
-                lat_result << "INSERT\t";
-                break;
-            case SCAN:
-                lat_result << "SCAN\t";
-                break;
-            case READMODIFYWRITE:
-                lat_result << "READMODIFYWRITE\t";
-                break;
-        }
-        lat_result << send_start << "\t" << completion_time << "\t" << elapsed << "\n";
+        lat_result << std::to_string(op_code) << "\t" << send_start << "\t" << completion_time << "\t" << elapsed << "\n";
     }
 
     lat_result.close();
