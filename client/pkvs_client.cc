@@ -26,7 +26,7 @@ void pkvs_client_init(void) {
 
 int pkvs_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int len) {
     struct pkvs_message * msg = (struct pkvs_message *)pkt;
-    msg->magic = 0x66;
+    msg->magic = 0x65;
     msg->op_code = (uint8_t)(wl->GenerateNextReq(pkt + sizeof(struct pkvs_message), len - sizeof(struct pkvs_message)));
     msg->req_id = 0x12345678;
     msg->tsc = rdtsc();
@@ -42,7 +42,7 @@ int pkvs_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
 
     pkvs_nb_rx++;
 
-    if (pkvs_nr_latency < 131072) {
+    if (/*start_lat_record && */pkvs_nr_latency < 131072) {
         pkvs_latencies[pkvs_nr_latency].op_code = msg->op_code;
         pkvs_latencies[pkvs_nr_latency].send_start = msg->tsc;
         pkvs_latencies[pkvs_nr_latency].completion_time = rdtsc();
