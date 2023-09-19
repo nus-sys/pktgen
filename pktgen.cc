@@ -206,6 +206,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     struct client * cl;
     core_info_t * info;
     uint64_t elapsed;
+    struct sched_param param;
 
     lid = rte_lcore_id();
     qid = lid;
@@ -214,6 +215,9 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     pktgen_init_core(lid);
 
     gettimeofday(&core_info[lid].start, NULL);
+
+    param.sched_priority = sched_get_priority_max(SCHED_RR);
+    sched_setscheduler(0, SCHED_RR, &param);
 
     printf("CPU %02d | start PKTGEN...\n", lid);
     while (true) {
