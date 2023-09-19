@@ -20,8 +20,10 @@ struct client {
 };
 
 struct client_operations {
+	void (*init) (void);
 	int (*send) (Workload *, struct client *, uint8_t *, int);
 	int (*recv) (Workload *, uint8_t *, uint16_t);
+	void (*output) (Workload *);
 };
 
 #endif  /* _CLIENT_H_ */

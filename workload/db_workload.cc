@@ -26,7 +26,7 @@ const std::string DBWorkload::READ_PROPORTION_PROPERTY = "readproportion";
 const std::string DBWorkload::READ_PROPORTION_DEFAULT = "0.95";
 
 const std::string DBWorkload::UPDATE_PROPORTION_PROPERTY = "updateproportion";
-const std::string DBWorkload::UPDATE_PROPORTION_DEFAULT = "0.05";
+const std::string DBWorkload::UPDATE_PROPORTION_DEFAULT = "0.0";
 
 const std::string DBWorkload::INSERT_PROPORTION_PROPERTY = "insertproportion";
 const std::string DBWorkload::INSERT_PROPORTION_DEFAULT = "0.0";
@@ -48,6 +48,8 @@ const std::string DBWorkload::OPERATION_COUNT_PROPERTY = "operationcount";
 
 inline void DBWorkload::Init(const Properties &p) {
     field_len_generator_ = GetFieldLenGenerator(p);
+
+    record_count_ = std::stoi(p.GetProperty(RECORD_COUNT_PROPERTY));
 
     std::string request_dist = p.GetProperty(REQUEST_DISTRIBUTION_PROPERTY,
                                             REQUEST_DISTRIBUTION_DEFAULT);
@@ -88,6 +90,8 @@ inline void DBWorkload::Init(const Properties &p) {
     if (readmodifywrite_proportion > 0) {
         op_chooser_.AddValue(READMODIFYWRITE, readmodifywrite_proportion);
     }
+
+    insert_key_sequence_.Set(record_count_);
 
     if (request_dist == "uniform") {
         key_chooser_ = new UniformGenerator(0, record_count_ - 1);

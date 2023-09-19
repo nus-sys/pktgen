@@ -60,7 +60,7 @@ struct rte_eth_conf port_conf = {
 	.rx_adv_conf = {
 		.rss_conf = {
 			.rss_key = NULL,
-			.rss_hf = ETH_RSS_IP | ETH_RSS_UDP,
+			.rss_hf = RTE_ETH_RSS_IP,
 		},
 	},
 };
@@ -116,13 +116,13 @@ void pktgen_create_flow(uint32_t rx_core) {
 	struct rte_flow_action action[MAX_ACTION_NUM];
 	struct rte_flow * flow = NULL;
 	struct rte_flow_action_queue queue = { .index = (uint16_t)rx_core };
-	struct rte_flow_item_ipv4 ip_spec = {0};
-	struct rte_flow_item_ipv4 ip_mask = {0};
-	struct rte_flow_item_udp udp_spec = {0};
-	struct rte_flow_item_udp udp_mask = {0};
+	// struct rte_flow_item_ipv4 ip_spec;
+	// struct rte_flow_item_ipv4 ip_mask;
+	// struct rte_flow_item_udp udp_spec;
+	// struct rte_flow_item_udp udp_mask;
 	int res;
 
-	dst_port = rx_core << 8;
+	// dst_port = (rx_core + 1) << 8;
 
     memset(pattern, 0, sizeof(pattern));
     memset(action, 0, sizeof(action));
@@ -132,7 +132,7 @@ void pktgen_create_flow(uint32_t rx_core) {
     * in this case only ingress packets will be checked.
     */
     memset(&attr, 0, sizeof(struct rte_flow_attr));
-    attr.ingress = 1;
+    // attr.ingress = 1;
 
     /*
     * create the action sequence.
@@ -142,6 +142,8 @@ void pktgen_create_flow(uint32_t rx_core) {
     action[0].conf = &queue;
     action[1].type = RTE_FLOW_ACTION_TYPE_END;
 
+    pattern[0].type = RTE_FLOW_ITEM_TYPE_END;
+#if 0
     /*
     * set the first level of the pattern (ETH).
     */
@@ -161,15 +163,15 @@ void pktgen_create_flow(uint32_t rx_core) {
     */
     memset(&udp_spec, 0, sizeof(struct rte_flow_item_udp));
     memset(&udp_mask, 0, sizeof(struct rte_flow_item_udp));
-    udp_spec.hdr.dst_port = htons(dst_port);
-    udp_mask.hdr.dst_port = htons(FULL_PORT_MASK);
+    udp_spec.hdr.src_port = htons(dst_port);
+    udp_mask.hdr.src_port = htons(FULL_PORT_MASK);
     pattern[2].type = RTE_FLOW_ITEM_TYPE_UDP;
     pattern[2].spec = &udp_spec;
     pattern[2].mask = &udp_mask;
 
     /* the final level must be always type end */
     pattern[3].type = RTE_FLOW_ITEM_TYPE_END;
-
+#endif
 	RTE_ETH_FOREACH_DEV(pid) {
         res = rte_flow_validate(pid, &attr, pattern, action, &error);
         if (!res) {
@@ -235,13 +237,12 @@ void pktgen_config_ports(void) {
             }
 
             /* 2. Configure RX/TX queue for each core */
-            ret = rte_eth_rx_queue_setup(pid, i, pktgen.nb_rxd, rte_socket_id(), &rx_conf, core_info[i].pkt_mempool);
+            ret = rte_eth_rx_queue_setup(pid, i, pktgen.nb_rxd, rte_eth_dev_socket_id(pid), &rx_conf, core_info[i].pkt_mempool);
             if (ret < 0) {
                 printf("rte_eth_rx_queue_setup: err=%d, port=%d, %s\n", ret, pid, rte_strerror(-ret));
             }
 
-            ret = rte_eth_tx_queue_setup(pid, i, pktgen.nb_txd,
-		    		rte_eth_dev_socket_id(pid), &tx_conf);
+            ret = rte_eth_tx_queue_setup(pid, i, pktgen.nb_txd, rte_eth_dev_socket_id(pid), &tx_conf);
     		if (ret < 0) {
                 printf("rte_eth_rx_queue_setup: err=%d, port=%d, %s\n", ret, pid, rte_strerror(-ret));
 		    }
@@ -269,8 +270,8 @@ void pktgen_config_ports(void) {
         }
     }
 
-	for (uint16_t i = 0; i < nb_core; i++) {
-        /* Receive core */
-        pktgen_create_flow(i);
-	}
+	// for (uint16_t i = 0; i < nb_core; i++) {
+    //     /* Receive core */
+    //     pktgen_create_flow(i);
+	// }
 }

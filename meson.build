@@ -27,6 +27,7 @@ sources = files(
     project_name + '-arp.cc',
     project_name + '-ether.cc',
     project_name + '-port-cfg.cc',
+    'client/pkvs_client.cc',
     'client/shinjuku_client.cc',
     'client/dummy_client.cc',
     'workload/db_workload.cc',

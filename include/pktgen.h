@@ -129,6 +129,8 @@ typedef struct pktgen_s {
 
     const struct client_operations * client_ops;	/**< Client operations */
 
+	uint64_t runtime;
+
 	Properties props;	/**< Workload properties */
 } pktgen_t;
 

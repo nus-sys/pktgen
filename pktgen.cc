@@ -26,14 +26,15 @@ void pktgen_init_core(uint16_t lid) {
     struct client * cl;
 	std::string wl;
 
-    printf("CPU %02d | initializing...\n", lid);
     info->nb_client = pktgen.nb_client;
     info->client_ops = pktgen.client_ops;
 
     wl = pktgen.props.GetProperty("workload", "synthetic");
 	if (wl == "rocksdb") {
+        printf("CPU %02d | initializing RocksDB workload...\n", lid);
 		info->wl = new DBWorkload();
 	} else if (wl == "synthetic") {
+        printf("CPU %02d | initializing Synthetic workload...\n", lid);
 		info->wl = new SynWorkload();
 	} else {
 		std::cout << "Unknown workload: " << wl << std::endl;
@@ -43,11 +44,15 @@ void pktgen_init_core(uint16_t lid) {
 
     for (int i = 0; i < info->nb_client; i++) {
         cl = &info->clients[i];
-        cl->sport = (lid << 8) | (i + 1);
+        cl->sport = ((lid + 1) << 8) | (i + 1);
         cl->last_send = CurrentTime_nanoseconds();
         cl->arrival = new ExponentialGenerator(pktgen.nb_core * pktgen.nb_client * 1.0e6 / pktgen.tx_rate);
         cl->interval = cl->arrival->Next();
     }
+
+    core_info[lid].client_ops->init();
+
+    return;
 }
 
 static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struct client * cl, int payload_len) {
@@ -109,7 +114,6 @@ void pktgen_main_transmit(uint16_t pid, uint16_t lid, uint16_t qid) {
     int pkt_cnt = mtab->len;
 
     if (pkt_cnt > 0) {
-        printf("CPU %02d| Send %d packets\n", lid, pkt_cnt);
         int ret;
         do {
             /* Send packets until there is none in TX queue */
@@ -150,7 +154,7 @@ static inline struct iphdr * pktgen_ip_pointer(uint8_t * p) {
     return (struct iphdr *)(p + ETH_HLEN);
 }
 
-int pktgen_main_receive(uint16_t lid, uint16_t pid, uint16_t qid) {
+int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid) {
     struct rte_mbuf * pkts_burst[DEFAULT_PKT_BURST];
     uint16_t nb_rx;
     uint16_t pkt_len;
@@ -158,8 +162,8 @@ int pktgen_main_receive(uint16_t lid, uint16_t pid, uint16_t qid) {
     uint16_t ptype;
     uint8_t * payload;
     uint16_t payload_len;
-    struct udphdr * u;
-    struct iphdr * iphdr;
+    // struct udphdr * u;
+    // struct iphdr * iphdr;
 
     /*
      * Read packet from RX queues and free the mbufs
@@ -167,8 +171,6 @@ int pktgen_main_receive(uint16_t lid, uint16_t pid, uint16_t qid) {
     if ((nb_rx = rte_eth_rx_burst(pid, qid, pkts_burst, DEFAULT_PKT_BURST)) == 0) {
         return nb_rx;
     }
-
-    printf("CPU %02d| Receive %d packets\n", lid, nb_rx);
 
     for (int i = 0; i < nb_rx; i++) {
         ptype = pktgen_packet_type(pkts_burst[i]);
@@ -179,13 +181,13 @@ int pktgen_main_receive(uint16_t lid, uint16_t pid, uint16_t qid) {
             printf("Receive ARP packet\n");
             pktgen_setup_arp(lid, pid, qid);
         } else if (ptype == RTE_ETHER_TYPE_IPV4) {
-            iphdr = pktgen_ip_pointer(pkt);
-            u = pktgen_udp_pointer(pkt);
+            // iphdr = pktgen_ip_pointer(pkt);
+            // u = pktgen_udp_pointer(pkt);
             // ip4_debug_print(iphdr);
             // udp_debug_print(u);
             payload = pkt + ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr);
             payload_len = pkt_len - (ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr));
-            printf("CPU %02d| Packet UDP port: %x\n", lid, ntohs(u->dest));
+            // printf("CPU %02d| Packet UDP port: %x\n", lid, ntohs(u->dest));
             core_info[lid].client_ops->recv(core_info[lid].wl, payload, payload_len);
         }
     }
@@ -220,7 +222,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
         }
 
     	RTE_ETH_FOREACH_DEV(i) {
-            pktgen_main_receive(lid, i, qid);
+            pktgen_main_receive(i, lid, qid);
 
             payload_len = std::stod(pktgen.props.GetProperty("payload_len", "64"));
 
@@ -243,7 +245,8 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     }
 
     printf("CPU %02d | finish PKTGEN...\n", lid);
-    core_info[lid].wl->PrintResult();
+    // core_info[lid].wl->PrintResult();
+    core_info[lid].client_ops->output(core_info[lid].wl);
 
     return 0;
 }

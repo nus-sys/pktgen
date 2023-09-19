@@ -22,7 +22,6 @@ enum Operation {
 };
 
 struct db_message {
-    Operation op_code;
     uint8_t key[64];
     uint8_t value[1024];
 } __attribute__((__packed__));
@@ -143,7 +142,8 @@ public:
     }
 
     uint16_t GenerateNextReq(uint8_t * pkt, int len) {
-        switch (this->NextOperation()) {
+        Operation nextOp = this->NextOperation();
+        switch (nextOp) {
             case READ:
                 TransactionRead(pkt, len);
                 break;
@@ -163,15 +163,15 @@ public:
                 throw Exception("Operation request is not recognized!");
         }
 
-        return 0;
+        return (uint16_t)nextOp;
     }
 
-    uint16_t RecordReply(uint8_t * pkt) {
+    uint16_t RecordReply(uint8_t * buf) {
         return 0;
     }
 
     void PrintResult(void) {
-        
+        return;
     }
 
 protected:
@@ -213,7 +213,7 @@ inline void DBWorkload::TransactionRead(uint8_t * buf, int len) {
     const std::string &key = this->NextTransactionKey();
     struct db_message * msg = (struct db_message *)buf;
 
-    msg->op_code = READ;
+    // msg->op_code = READ;
     memcpy(msg->key, key.c_str(), key.length());
 }
 
@@ -256,17 +256,18 @@ inline void DBWorkload::TransactionUpdate(uint8_t * buf, int len) {
     const std::string &value = this->BuildValues();
     struct db_message * msg = (struct db_message *)buf;
 
-    msg->op_code = UPDATE;
+    // msg->op_code = UPDATE;
     memcpy(msg->key, key.c_str(), key.length());
     memcpy(msg->value, value.c_str(), value.length());
 }
 
+/* Insert is used to preload data */
 inline void DBWorkload::TransactionInsert(uint8_t * buf, int len) {
     const std::string &key = this->NextSequenceKey();
     const std::string &value = this->BuildValues();
     struct db_message * msg = (struct db_message *)buf;
 
-    msg->op_code = INSERT;
+    // msg->op_code = INSERT;
     memcpy(msg->key, key.c_str(), key.length());
     memcpy(msg->value, value.c_str(), value.length());
 } 

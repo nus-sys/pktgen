@@ -12,12 +12,16 @@ struct shinjuku_message {
     uint32_t pkts_length;
 } __attribute__((__packed__));
 
+void shinjuku_client_init(void);
 int shinjuku_client_send(Workload *, struct client *, uint8_t *, int);
 int shinjuku_client_recv(Workload *, uint8_t *, uint16_t);
+void shinjuku_client_output(Workload *);
 
 static const struct client_operations shinjuku_ops = {
+    .init   = shinjuku_client_init,
     .send   = shinjuku_client_send,
     .recv   = shinjuku_client_recv,
+    .output = shinjuku_client_output,
 };
 
 #endif  /* _SHINJUKU_CLIENT_H_ */

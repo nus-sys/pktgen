@@ -15,6 +15,7 @@
 #include "client.h"
 #include "dummy_client.h"
 #include "shinjuku_client.h"
+#include "pkvs_client.h"
 
 #include "pktgen.h"
 #include "pktgen-info.h"
@@ -55,6 +56,12 @@ static int pktgen_parse_args(int argc, char ** argv) {
 			} else if (!strcmp(optarg, "shinjuku")) {
 				printf("\t * Client: SHINJUKU\n");
 				pktgen.client_ops = &shinjuku_ops;
+			} else if (!strcmp(optarg, "pkvs")) {
+				printf("\t * Client: PKVS\n");
+				pktgen.client_ops = &pkvs_ops;
+			} else {
+				printf("Unknown client: %s\n", optarg);
+				exit(1);
 			}
 			break;
 
@@ -130,6 +137,8 @@ int pktgen_config_info(void) {
 	uint8_t dst_mac[ETH_ALEN];
 	uint32_t src_ip, dst_ip;
 	uint16_t dport;
+
+	pktgen.runtime = std::stoi(pktgen.props.GetProperty("runtime", "10"));
 
 	src_mac_addr = pktgen.props.GetProperty("src_mac", "00:00:00:00:00:00");
 	dst_mac_addr = pktgen.props.GetProperty("dst_mac", "00:00:00:00:00:00");
