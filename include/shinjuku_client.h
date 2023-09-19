@@ -15,7 +15,7 @@ struct shinjuku_message {
 void shinjuku_client_init(void);
 int shinjuku_client_send(Workload *, struct client *, uint8_t *, int);
 int shinjuku_client_recv(Workload *, uint8_t *, uint16_t);
-void shinjuku_client_output(Workload *);
+void shinjuku_client_output(Workload *, uint64_t);
 
 static const struct client_operations shinjuku_ops = {
     .init   = shinjuku_client_init,

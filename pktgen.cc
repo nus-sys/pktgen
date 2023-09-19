@@ -205,6 +205,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     uint64_t curr_tsc;
     struct client * cl;
     core_info_t * info;
+    uint64_t elapsed;
 
     lid = rte_lcore_id();
     qid = lid;
@@ -218,6 +219,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     while (true) {
         gettimeofday(&curr, NULL);
         if (curr.tv_sec > core_info[lid].start.tv_sec + 20) {
+            gettimeofday(&core_info[lid].end, NULL);
             break;
         }
 
@@ -246,7 +248,8 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
 
     printf("CPU %02d | finish PKTGEN...\n", lid);
     // core_info[lid].wl->PrintResult();
-    core_info[lid].client_ops->output(core_info[lid].wl);
+    elapsed = TIMEVAL_TO_USEC(core_info[lid].end) - TIMEVAL_TO_USEC(core_info[lid].start);
+    core_info[lid].client_ops->output(core_info[lid].wl, elapsed);
 
     return 0;
 }

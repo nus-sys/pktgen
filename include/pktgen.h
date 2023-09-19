@@ -136,6 +136,8 @@ typedef struct pktgen_s {
 
 extern pktgen_t pktgen;
 
+#define TIMEVAL_TO_USEC(t)  (((t).tv_sec * 1e6) + ((t).tv_usec))
+
 int pktgen_launch_one_lcore(void * arg);
 
 #endif  /* _PKTGEN_H_ */

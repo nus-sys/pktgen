@@ -19,7 +19,7 @@ int shinjuku_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
     return 0;
 }
 
-void shinjuku_client_output(Workload * wl) {
+void shinjuku_client_output(Workload * wl, uint64_t duration) {
     wl->PrintResult();
     return;
 }

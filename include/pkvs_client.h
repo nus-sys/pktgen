@@ -14,7 +14,7 @@ struct pkvs_message {
 void pkvs_client_init(void);
 int pkvs_client_send(Workload *, struct client *, uint8_t *, int);
 int pkvs_client_recv(Workload *, uint8_t *, uint16_t);
-void pkvs_client_output(Workload *);
+void pkvs_client_output(Workload *, uint64_t);
 
 static const struct client_operations pkvs_ops = {
     .init   = pkvs_client_init,

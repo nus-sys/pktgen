@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include "pkvs_client.h"
 #include "pktgen.h"
 
@@ -7,6 +9,8 @@ struct pkvs_ts {
 	uint64_t completion_time;   /* In CPU cycle */
 };
 
+__thread uint64_t pkvs_nb_rx = 0;
+__thread uint64_t pkvs_nb_tx = 0;
 __thread int pkvs_nr_latency = 0;
 __thread struct pkvs_ts * pkvs_latencies;
 
@@ -26,12 +30,17 @@ int pkvs_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int len) 
     msg->op_code = (uint8_t)(wl->GenerateNextReq(pkt + sizeof(struct pkvs_message), len - sizeof(struct pkvs_message)));
     msg->req_id = 0x12345678;
     msg->tsc = rdtsc();
+
+    pkvs_nb_tx++;
+
     return 0;
 }
 
 int pkvs_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
     struct pkvs_message * msg;
     msg = (struct pkvs_message *)pkt;
+
+    pkvs_nb_rx++;
 
     if (pkvs_nr_latency < 131072) {
         pkvs_latencies[pkvs_nr_latency].op_code = msg->op_code;
@@ -43,12 +52,14 @@ int pkvs_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
     return 0;
 }
 
-void pkvs_client_output(Workload * wl) {
+void pkvs_client_output(Workload * wl, uint64_t duration) {
     uint8_t op_code;
     uint64_t send_start, completion_time, elapsed;
-    std::ofstream result; // outs is an output stream of iostream class
+    std::ofstream lat_result; // outs is an output stream of iostream class
+    FILE * thp_result;
+    char name[32];
 
-    result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
+    lat_result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
 
     for (int i = 0; i < pkvs_nr_latency; i++) {
         op_code = pkvs_latencies[i].op_code;
@@ -57,25 +68,37 @@ void pkvs_client_output(Workload * wl) {
         elapsed = pkvs_latencies[i].completion_time - pkvs_latencies[i].send_start;
         switch (op_code) {
             case READ:
-                result << "READ\t";
+                lat_result << "READ\t";
                 break;
             case UPDATE:
-                result << "UPDATE\t";
+                lat_result << "UPDATE\t";
                 break;
             case INSERT:
-                result << "INSERT\t";
+                lat_result << "INSERT\t";
                 break;
             case SCAN:
-                result << "SCAN\t";
+                lat_result << "SCAN\t";
                 break;
             case READMODIFYWRITE:
-                result << "READMODIFYWRITE\t";
+                lat_result << "READMODIFYWRITE\t";
                 break;
         }
-        result << send_start << "\t" << completion_time << "\t" << elapsed << "\n";
+        lat_result << send_start << "\t" << completion_time << "\t" << elapsed << "\n";
     }
 
-    result.close() ;    // closing the output file stream
+    lat_result.close();
 
+    sprintf(name, "thp-%d.txt", sched_getcpu());
+    thp_result = fopen(name, "w");
+    if (!thp_result) {
+        printf("Error!\n");
+    }
+
+    fprintf(thp_result, "%lu\t%.4f\t%lu\t%.4f\n", pkvs_nb_rx, ((float)pkvs_nb_rx) / duration, pkvs_nb_tx, ((float)pkvs_nb_tx) / duration);
+    fclose(thp_result);
+
+    printf("CPU %02d| Duration: %lu s, Rx: %lu, Rx rate: %.4f (Mpps), Tx: %lu, Tx rate: %.4f (Mpps)\n", 
+            sched_getcpu(), duration / 1000000, pkvs_nb_rx, 
+            ((float)pkvs_nb_rx) / duration, pkvs_nb_tx, ((float)pkvs_nb_tx) / duration);
     return;
 }
