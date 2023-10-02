@@ -12,6 +12,7 @@ class ExponentialGenerator : public Generator<uint64_t> {
             double dist_lambda = 1 / mean;
             G_ = std::exponential_distribution<>{dist_lambda};
             generator_ = std::default_random_engine{};
+            generator_.seed(rand());
         }
 
         uint64_t Next() {

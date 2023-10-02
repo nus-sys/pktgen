@@ -3,6 +3,7 @@
 
 #include "core/const_generator.h"
 #include "core/uniform_generator.h"
+#include "core/bimodal_generator.h"
 
 const std::string SynWorkload::SERVICE_TIME_DISTRIBUTION_PROPERTY = "service_time_dist";
 const std::string SynWorkload::SERVICE_TIME_DISTRIBUTION_DEFAULT = "constant";
@@ -25,5 +26,7 @@ inline void SynWorkload::Init(const Properties &p) {
         service_time_generator_ = new ConstGenerator(service_time_arg1);
     } else if (service_time_dist == "uniform") {
         service_time_generator_ = new UniformGenerator(service_time_arg1, service_time_arg2);
-    }
+    } else if (service_time_dist == "bimodal") {
+        service_time_generator_ = new BimodalGenerator(service_time_arg1, 0.995, service_time_arg2, 0.005);
+    } 
 }

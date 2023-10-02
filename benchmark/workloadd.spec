@@ -7,8 +7,8 @@ dst_ip=10.10.1.1
 dport=1234
 
 workload=synthetic
-service_time_arg1=2500
-service_time_arg2=12500
-service_time_dist=uniform
+service_time_arg1=1250
+service_time_arg2=1250000
+service_time_dist=bimodal
 
 payload_len=64

@@ -12,6 +12,7 @@
 #include "workload.h"
 
 struct client {
+    uint16_t id;	/* < Request ID */
     uint16_t req_id;	/* < Request ID */
     uint16_t sport;		/* < Source port number */
 	uint64_t last_send;	/* < Last send (in nanosecond) */

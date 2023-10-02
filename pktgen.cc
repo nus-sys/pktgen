@@ -44,7 +44,10 @@ void pktgen_init_core(uint16_t lid) {
 
     for (int i = 0; i < info->nb_client; i++) {
         cl = &info->clients[i];
-        cl->sport = ((lid + 1) << 8) | (i + 1);
+        // cl->sport = ((lid + 1) << 8) | (i + 1);
+        cl->id = (lid + 1) << 8 | (i + 1);
+        cl->req_id = 0;
+        cl->sport = (lid + 1) << 8;
         cl->last_send = CurrentTime_nanoseconds();
         cl->arrival = new ExponentialGenerator(pktgen.nb_core * pktgen.nb_client * 1.0e6 / pktgen.tx_rate);
         cl->interval = cl->arrival->Next();
@@ -222,7 +225,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     printf("CPU %02d | start PKTGEN...\n", lid);
     while (true) {
         gettimeofday(&curr, NULL);
-        if (curr.tv_sec > core_info[lid].start.tv_sec + 20) {
+        if (curr.tv_sec > core_info[lid].start.tv_sec + 5) {
             gettimeofday(&core_info[lid].end, NULL);
             break;
         }
@@ -254,6 +257,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     // core_info[lid].wl->PrintResult();
     elapsed = TIMEVAL_TO_USEC(core_info[lid].end) - TIMEVAL_TO_USEC(core_info[lid].start);
     core_info[lid].client_ops->output(core_info[lid].wl, elapsed);
+    printf("CPU %02d | Done!\n", lid);
 
     return 0;
 }

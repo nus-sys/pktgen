@@ -212,10 +212,16 @@ int main(int argc, char **argv) {
 		printf("Failed to start lcore, return %d\n", ret);
 	}
 
+	printf("1\n");
+
 	rte_delay_ms(250);	/* Wait for the lcores to start up. */
+
+	printf("2\n");
 
 	/* Wait for all of the cores to stop running and exit. */
 	rte_eal_mp_wait_lcore();
+
+	printf("3\n");
 
 	RTE_ETH_FOREACH_DEV(i) {
 		rte_eth_dev_stop(i);

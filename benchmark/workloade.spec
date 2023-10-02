@@ -7,9 +7,16 @@ dst_ip=10.10.1.1
 dport=1234
 
 workload=rocksdb
-readproportion=0
-insertproportion=1
+
+fieldlength=32
+readproportion=0.5
+updateproportion=0
+scanproportion=0.5
+insertproportion=0
+
+maxscanlength=200
+
 recordcount=1000000
-operationcount=0
+operationcount=1000000
 
 payload_len=512

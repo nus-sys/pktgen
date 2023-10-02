@@ -45,9 +45,11 @@ static struct rte_eth_txconf tx_conf = {
 struct rte_eth_conf port_conf = {
     .rxmode = {
 #if RTE_VERSION >= RTE_VERSION_NUM(21, 11, 0, 0)
-        .mq_mode        = RTE_ETH_MQ_RX_RSS,
+        // .mq_mode        = RTE_ETH_MQ_RX_RSS,
+        .mq_mode        = RTE_ETH_MQ_RX_NONE,
 #elif RTE_VERSION >= RTE_VERSION_NUM(20, 11, 0, 0)
-        .mq_mode        = ETH_MQ_RX_RSS,
+        // .mq_mode        = ETH_MQ_RX_RSS,
+        .mq_mode        = ETH_MQ_RX_NONE,
 #endif
         .split_hdr_size = 0,
     },
@@ -162,7 +164,8 @@ void pktgen_create_flow(uint32_t rx_core) {
     memset(&udp_spec, 0, sizeof(struct rte_flow_item_udp));
     memset(&udp_mask, 0, sizeof(struct rte_flow_item_udp));
     udp_spec.hdr.dst_port = htons(dst_port);
-    udp_mask.hdr.dst_port = htons(PART_PORT_MASK);
+    // udp_mask.hdr.dst_port = htons(PART_PORT_MASK);
+    udp_mask.hdr.dst_port = htons(FULL_PORT_MASK);
     pattern[2].type = RTE_FLOW_ITEM_TYPE_UDP;
     pattern[2].spec = &udp_spec;
     pattern[2].mask = &udp_mask;
@@ -268,8 +271,8 @@ void pktgen_config_ports(void) {
         }
     }
 
-	// for (uint16_t i = 0; i < nb_core; i++) {
+	for (uint16_t i = 0; i < nb_core; i++) {
         /* Receive core */
-        pktgen_create_flow(0);
-	// }
+        pktgen_create_flow(i);
+	}
 }

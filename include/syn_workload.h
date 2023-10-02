@@ -55,6 +55,8 @@ public:
         msg->send_start = this->CurrentTime_nanoseconds();
         msg->service_time = this->NextServiceTime();
 
+        nb_tx++;
+
         // printf("Send start: %lu, service time: %lu\n", msg->send_start, msg->service_time);
 
         return 0;
@@ -63,6 +65,13 @@ public:
     uint16_t RecordReply(uint8_t * buf) {
         struct syn_message * msg;
         msg = (struct syn_message *)buf;
+
+        nb_rx++;
+        if (msg->service_time < 2500) {
+            short_task++;
+        } else {
+            long_task++;
+        }
 
         if (nr_latency < 131072) {
             latencies[nr_latency].send_start = msg->send_start;
@@ -73,9 +82,11 @@ public:
         return 0;
     }
 
-    void PrintResult(void) {
+    void PrintResult(uint64_t duration) {
         uint64_t send_start, completion_time, elapsed;
         std::ofstream result; // outs is an output stream of iostream class
+        FILE * thp_result;
+        char name[32];
 
         result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
 
@@ -87,10 +98,23 @@ public:
         }
 
         result.close() ;    // closing the output file stream
+
+        sprintf(name, "thp-%d.txt", sched_getcpu());
+        thp_result = fopen(name, "w");
+        if (!thp_result) {
+            printf("Error!\n");
+        }
+
+        fprintf(thp_result, "%.4f\t%.4f\t%.4f\t%.4f\n", 
+            ((float)nb_rx) * 1000.0 / duration, ((float)short_task) * 1000.0 / duration, ((float)long_task) * 1000.0 / duration, ((float)nb_tx) * 1000.0 / duration);
+        fclose(thp_result);
+
+        printf("CPU %02d| Duration: %lu s, Rx: %lu, Rx rate: %.4f (Kpps), Tx: %lu, Tx rate: %.4f (Kpps)\n", 
+                sched_getcpu(), duration / 1000000, nb_rx, ((float)nb_rx) * 1000.0 / duration, nb_tx, ((float)nb_tx) * 1000.0 / duration);
     }
 
     SynWorkload() :
-        nr_latency(0), service_time_generator_(NULL) {
+        nr_latency(0), service_time_generator_(NULL), short_task(0), long_task(0), nb_rx(0), nb_tx(0) {
             latencies = (struct syn_ts *)calloc(131072, sizeof(struct syn_ts));
     }
     
@@ -102,6 +126,10 @@ protected:
     int nr_latency;
     struct syn_ts * latencies;
     Generator<uint64_t> *service_time_generator_;
+    uint64_t short_task;
+    uint64_t long_task;
+    uint64_t nb_rx;
+    uint64_t nb_tx;
 
 private:
     uint64_t CurrentTime_nanoseconds() {
