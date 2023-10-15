@@ -55,6 +55,8 @@ public:
         msg->send_start = this->CurrentTime_nanoseconds();
         msg->service_time = this->NextServiceTime();
 
+        nr_tx++;
+
         // printf("Send start: %lu, service time: %lu\n", msg->send_start, msg->service_time);
 
         return 0;
@@ -70,12 +72,21 @@ public:
             nr_latency++;
         }
 
+        nr_rx++;
+        if (msg->service_time < 15000) {
+            nr_rx_1++;
+        } else {
+            nr_rx_2++;
+        }
+
         return 0;
     }
 
-    void PrintResult(void) {
+    void PrintResult(uint64_t duration) {
         uint64_t send_start, completion_time, elapsed;
         std::ofstream result; // outs is an output stream of iostream class
+        char name[32];
+        FILE * thp_result;
 
         result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
 
@@ -87,10 +98,26 @@ public:
         }
 
         result.close() ;    // closing the output file stream
+
+        sprintf(name, "thp-%d.txt", sched_getcpu());
+        thp_result = fopen(name, "w");
+        if (!thp_result) {
+            printf("Error!\n");
+        }
+
+        fprintf(thp_result, "%lu\t%.4f\t%lu\t%.4f\t%lu\t%.4f\t%lu\t%.4f\n", 
+                nr_rx, ((float)nr_rx) / duration, 
+                nr_rx_1, ((float)nr_rx_1) / duration, 
+                nr_rx_2, ((float)nr_rx_2) / duration, 
+                nr_tx, ((float)nr_tx) / duration);
+        fclose(thp_result);
+
+        printf("CPU %02d| Duration: %lu s, Rx: %lu, Rx rate: %.4f (Mpps), Tx: %lu, Tx rate: %.4f (Mpps)\n", 
+                sched_getcpu(), duration / 1000000, nr_rx, ((float)nr_rx) / duration, nr_tx, ((float)nr_tx) / duration);
     }
 
     SynWorkload() :
-        nr_latency(0), service_time_generator_(NULL) {
+        nr_latency(0), service_time_generator_(NULL), nr_rx(0), nr_tx(0), nr_rx_1(0), nr_rx_2(0) {
             latencies = (struct syn_ts *)calloc(131072, sizeof(struct syn_ts));
     }
     
@@ -102,6 +129,10 @@ protected:
     int nr_latency;
     struct syn_ts * latencies;
     Generator<uint64_t> *service_time_generator_;
+    uint64_t nr_rx;
+    uint64_t nr_rx_1;
+    uint64_t nr_rx_2;
+    uint64_t nr_tx;
 
 private:
     uint64_t CurrentTime_nanoseconds() {

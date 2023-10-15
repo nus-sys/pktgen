@@ -170,7 +170,7 @@ public:
         return 0;
     }
 
-    void PrintResult(void) {
+    void PrintResult(uint64_t duration) {
         return;
     }
 

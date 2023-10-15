@@ -44,7 +44,7 @@ void pktgen_init_core(uint16_t lid) {
 
     for (int i = 0; i < info->nb_client; i++) {
         cl = &info->clients[i];
-        cl->sport = ((lid + 1) << 8) | (i + 1);
+        cl->sport = ((lid + 1) << 8);
         cl->last_send = CurrentTime_nanoseconds();
         cl->arrival = new ExponentialGenerator(pktgen.nb_core * pktgen.nb_client * 1.0e6 / pktgen.tx_rate);
         cl->interval = cl->arrival->Next();
@@ -222,7 +222,7 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     printf("CPU %02d | start PKTGEN...\n", lid);
     while (true) {
         gettimeofday(&curr, NULL);
-        if (curr.tv_sec > core_info[lid].start.tv_sec + 20) {
+        if (curr.tv_sec > core_info[lid].start.tv_sec + 10) {
             gettimeofday(&core_info[lid].end, NULL);
             break;
         }

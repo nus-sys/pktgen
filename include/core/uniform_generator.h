@@ -9,7 +9,10 @@
 class UniformGenerator : public Generator<uint64_t> {
 public:
     // Both min and max are inclusive
-    UniformGenerator(uint64_t min, uint64_t max) : dist_(min, max) { Next(); }
+    UniformGenerator(uint64_t min, uint64_t max) : dist_(min, max) { 
+        generator_.seed(rand());
+        Next(); 
+    }
     
     uint64_t Next();
     uint64_t Last();
