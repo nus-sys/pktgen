@@ -60,11 +60,11 @@ public:
         return 0;
     }
 
-    uint16_t RecordReply(uint8_t * buf) {
+    uint16_t RecordReply(bool record_flag, uint8_t * buf) {
         struct syn_message * msg;
         msg = (struct syn_message *)buf;
 
-        if (nr_latency < 131072) {
+        if (record_flag && nr_latency < 131072) {
             latencies[nr_latency].send_start = msg->send_start;
             latencies[nr_latency].completion_time = CurrentTime_nanoseconds();
             nr_latency++;

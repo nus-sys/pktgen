@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
 #include <sys/time.h>
@@ -15,6 +16,7 @@
 pktgen_t pktgen;
 pkt_info_t pkt_info;
 core_info_t core_info[NR_MAX_CPU];
+__thread bool start_lat_record = false;
 
 static inline uint64_t CurrentTime_nanoseconds() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>
@@ -162,8 +164,8 @@ int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid) {
     uint16_t ptype;
     uint8_t * payload;
     uint16_t payload_len;
-    // struct udphdr * u;
-    // struct iphdr * iphdr;
+    struct udphdr * u;
+    struct iphdr * iphdr;
 
     /*
      * Read packet from RX queues and free the mbufs
@@ -181,8 +183,16 @@ int pktgen_main_receive(uint16_t pid, uint16_t lid, uint16_t qid) {
             printf("Receive ARP packet\n");
             pktgen_setup_arp(lid, pid, qid);
         } else if (ptype == RTE_ETHER_TYPE_IPV4) {
-            // iphdr = pktgen_ip_pointer(pkt);
-            // u = pktgen_udp_pointer(pkt);
+            iphdr = pktgen_ip_pointer(pkt);
+            if (iphdr->protocol != IPPROTO_UDP) {
+                continue;
+            }
+
+            u = pktgen_udp_pointer(pkt);
+            if (((ntohs(u->dest) & 0xff00) >> 8) != (lid + 1)) {
+                continue;
+            }
+
             // ip4_debug_print(iphdr);
             // udp_debug_print(u);
             payload = pkt + ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr);
@@ -212,25 +222,27 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     qid = lid;
     info = &core_info[lid];
 
+    payload_len = std::stod(pktgen.props.GetProperty("payload_len", "64"));
+
     pktgen_init_core(lid);
 
     gettimeofday(&core_info[lid].start, NULL);
 
-    param.sched_priority = sched_get_priority_max(SCHED_RR);
-    sched_setscheduler(0, SCHED_RR, &param);
-
     printf("CPU %02d | start PKTGEN...\n", lid);
     while (true) {
         gettimeofday(&curr, NULL);
-        if (curr.tv_sec > core_info[lid].start.tv_sec + 20) {
+
+        if (!start_lat_record && curr.tv_sec > core_info[lid].start.tv_sec + 5) {
+            start_lat_record = true;
+        }
+
+        if (curr.tv_sec > core_info[lid].start.tv_sec + (time_t)pktgen.runtime) {
             gettimeofday(&core_info[lid].end, NULL);
             break;
         }
 
     	RTE_ETH_FOREACH_DEV(i) {
             pktgen_main_receive(i, lid, qid);
-
-            payload_len = std::stod(pktgen.props.GetProperty("payload_len", "64"));
 
             curr_tsc = CurrentTime_nanoseconds();
 

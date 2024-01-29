@@ -268,8 +268,8 @@ void pktgen_config_ports(void) {
         }
     }
 
-	// for (uint16_t i = 0; i < nb_core; i++) {
+	for (uint16_t i = 0; i < nb_core; i++) {
         /* Receive core */
-        pktgen_create_flow(0);
-	// }
+        pktgen_create_flow(i);
+	}
 }

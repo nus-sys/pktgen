@@ -135,6 +135,7 @@ typedef struct pktgen_s {
 } pktgen_t;
 
 extern pktgen_t pktgen;
+extern __thread bool start_lat_record;
 
 #define TIMEVAL_TO_USEC(t)  (((t).tv_sec * 1e6) + ((t).tv_usec))
 

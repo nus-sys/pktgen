@@ -42,7 +42,7 @@ int pkvs_client_recv(Workload * wl, uint8_t * pkt, uint16_t len) {
 
     pkvs_nb_rx++;
 
-    if (/*start_lat_record && */pkvs_nr_latency < 131072) {
+    if (start_lat_record && pkvs_nr_latency < 131072) {
         pkvs_latencies[pkvs_nr_latency].op_code = msg->op_code;
         pkvs_latencies[pkvs_nr_latency].send_start = msg->tsc;
         pkvs_latencies[pkvs_nr_latency].completion_time = rdtsc();
@@ -58,10 +58,11 @@ void pkvs_client_output(Workload * wl, uint64_t duration) {
     std::ofstream lat_result; // outs is an output stream of iostream class
     FILE * thp_result;
     char name[32];
+    int start = 0.15 * pkvs_nr_latency;
 
     lat_result.open("latency-" + std::to_string(sched_getcpu()) + ".txt") ; // connect outs to file outFile
 
-    for (int i = 0; i < pkvs_nr_latency; i++) {
+    for (int i = start; i < pkvs_nr_latency; i++) {
         op_code = pkvs_latencies[i].op_code;
         send_start = pkvs_latencies[i].send_start;
         completion_time = pkvs_latencies[i].completion_time;

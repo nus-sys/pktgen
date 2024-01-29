@@ -26,7 +26,7 @@ const std::string DBWorkload::READ_PROPORTION_PROPERTY = "readproportion";
 const std::string DBWorkload::READ_PROPORTION_DEFAULT = "0.95";
 
 const std::string DBWorkload::UPDATE_PROPORTION_PROPERTY = "updateproportion";
-const std::string DBWorkload::UPDATE_PROPORTION_DEFAULT = "0.0";
+const std::string DBWorkload::UPDATE_PROPORTION_DEFAULT = "0.05";
 
 const std::string DBWorkload::INSERT_PROPORTION_PROPERTY = "insertproportion";
 const std::string DBWorkload::INSERT_PROPORTION_DEFAULT = "0.0";
@@ -133,7 +133,8 @@ inline std::string DBWorkload::BuildKeyName(uint64_t key_num) {
     std::string key_num_str = std::to_string(key_num);
     int zeros = zero_padding_ - key_num_str.length();
     zeros = std::max(0, zeros);
-    return std::string("user").append(zeros, '0').append(key_num_str);
+    // return std::string("user").append(zeros, '0').append(key_num_str);
+    return std::string(zeros, '0').append(key_num_str);
 }
 
 Generator<uint64_t> * DBWorkload::GetFieldLenGenerator(const Properties &p) {

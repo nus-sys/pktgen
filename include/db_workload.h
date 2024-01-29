@@ -166,7 +166,7 @@ public:
         return (uint16_t)nextOp;
     }
 
-    uint16_t RecordReply(uint8_t * buf) {
+    uint16_t RecordReply(bool record_flag, uint8_t * buf) {
         return 0;
     }
 

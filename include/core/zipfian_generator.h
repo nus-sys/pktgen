@@ -8,7 +8,8 @@
 
 class ZipfianGenerator : public Generator<uint64_t> {
 public:
-    constexpr static const double kZipfianConst = 0.9999;
+    // constexpr static const double kZipfianConst = 0.9999;
+    constexpr static const double kZipfianConst = 0.5;
     static const uint64_t kMaxNumItems = (UINT64_MAX >> 24);
     
     ZipfianGenerator(uint64_t min, uint64_t max,
