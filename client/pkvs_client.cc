@@ -28,6 +28,7 @@ int pkvs_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int max_l
     struct pkvs_message * msg = (struct pkvs_message *)pkt;
     msg->magic = 0x65;
     msg->op_code = (uint8_t)(wl->GenerateNextReq(pkt + sizeof(struct pkvs_message), max_len - sizeof(struct pkvs_message), len));
+    (*len) += sizeof(struct pkvs_message);
     msg->req_id = 0x12345678;
     msg->tsc = rdtsc();
 
