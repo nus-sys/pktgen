@@ -5,8 +5,8 @@ void dummy_client_init(void) {
     return;
 }
 
-int dummy_client_send(Workload * wl, struct client *, uint8_t * pkt, int len) {
-    wl->GenerateNextReq(pkt, len);
+int dummy_client_send(Workload * wl, struct client *, uint8_t * pkt, int max_len, int * len) {
+    wl->GenerateNextReq(pkt, max_len, len);
     return 0;
 }
 

@@ -63,8 +63,9 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
     struct rte_mbuf * tx_pkt;
     uint8_t * pkt;
     int next_pkt;
-    int pkt_size;
+    int max_pkt_size;
     uint8_t * payload;
+    int len = 0;
 
     if (unlikely(mtab->len == DEFAULT_PKT_BURST)) {
         return;
@@ -72,7 +73,7 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
 
     next_pkt = mtab->len;
     tx_pkt = pkts[next_pkt];
-    pkt_size = ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len;
+    max_pkt_size = ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len;
 
     tx_pkt->nb_segs = 1;
     tx_pkt->next = NULL;
@@ -90,20 +91,21 @@ static void pktgen_setup_packets(uint16_t pid, uint16_t lid, uint16_t qid, struc
 #endif
 
     pkt = rte_pktmbuf_mtod(tx_pkt, uint8_t *);
-    memset(pkt, 0, pkt_size);
+    memset(pkt, 0, max_pkt_size);
 
     payload = pkt + ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr);
 
     /* Fill payload */
-    core_info[lid].client_ops->send(core_info[lid].wl, cl, payload, payload_len);
+    core_info[lid].client_ops->send(core_info[lid].wl, cl, payload, payload_len, &len);
+    assert(len > 0);
 
-    tx_pkt->pkt_len = tx_pkt->data_len = pkt_size;
+    tx_pkt->pkt_len = tx_pkt->data_len = ETH_HLEN + sizeof(struct iphdr) + sizeof(struct udphdr) + len;
 
     /* Construct the UDP header */
-    pktgen_udp_hdr_ctor(cl, pkt, payload_len);
+    pktgen_udp_hdr_ctor(cl, pkt, len);
 
     /* IPv4 Header constructor */
-    pktgen_ipv4_ctor(pkt, payload_len);
+    pktgen_ipv4_ctor(pkt, len);
 
     pktgen_ether_hdr_ctor(pkt);
 
@@ -216,7 +218,6 @@ int pktgen_launch_one_lcore(void * arg __rte_unused) {
     struct client * cl;
     core_info_t * info;
     uint64_t elapsed;
-    struct sched_param param;
 
     lid = rte_lcore_id();
     qid = lid;

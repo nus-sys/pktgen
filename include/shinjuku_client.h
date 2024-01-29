@@ -13,7 +13,7 @@ struct shinjuku_message {
 } __attribute__((__packed__));
 
 void shinjuku_client_init(void);
-int shinjuku_client_send(Workload *, struct client *, uint8_t *, int);
+int shinjuku_client_send(Workload *, struct client *, uint8_t *, int, int *);
 int shinjuku_client_recv(Workload *, uint8_t *, uint16_t);
 void shinjuku_client_output(Workload *, uint64_t);
 

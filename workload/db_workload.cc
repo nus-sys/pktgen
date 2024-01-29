@@ -46,6 +46,9 @@ const std::string DBWorkload::INSERT_START_DEFAULT = "0";
 const std::string DBWorkload::RECORD_COUNT_PROPERTY = "recordcount";
 const std::string DBWorkload::OPERATION_COUNT_PROPERTY = "operationcount";
 
+const std::string DBWorkload::ZERO_PADDING_PROPERTY = "zeropadding";
+const std::string DBWorkload::ZERO_PADDING_DEFAULT = "1";
+
 inline void DBWorkload::Init(const Properties &p) {
     field_len_generator_ = GetFieldLenGenerator(p);
 
@@ -72,6 +75,8 @@ inline void DBWorkload::Init(const Properties &p) {
 
     int insert_start = std::stoi(p.GetProperty(INSERT_START_PROPERTY,
                                             INSERT_START_DEFAULT));
+
+    zero_padding_ = std::stoi(p.GetProperty(ZERO_PADDING_PROPERTY, ZERO_PADDING_DEFAULT));
 
     key_generator_ = new CounterGenerator(insert_start);
 

@@ -21,9 +21,12 @@ enum Operation {
     READMODIFYWRITE
 };
 
+#define KEY_LENGTH      64
+#define FIELD_LENGTH    1024
+
 struct db_message {
-    uint8_t key[64];
-    uint8_t value[1024];
+    uint8_t key[KEY_LENGTH];
+    uint8_t value[FIELD_LENGTH];
 } __attribute__((__packed__));
 
 class DBWorkload : public Workload {
@@ -141,23 +144,23 @@ public:
         if (scan_len_chooser_) delete scan_len_chooser_;
     }
 
-    uint16_t GenerateNextReq(uint8_t * pkt, int len) {
+    uint16_t GenerateNextReq(uint8_t * pkt, int max_len, int * len) {
         Operation nextOp = this->NextOperation();
         switch (nextOp) {
             case READ:
-                TransactionRead(pkt, len);
+                TransactionRead(pkt, max_len, len);
                 break;
             case UPDATE:
-                TransactionUpdate(pkt, len);
+                TransactionUpdate(pkt, max_len, len);
                 break;
             case INSERT:
-                TransactionInsert(pkt, len);
+                TransactionInsert(pkt, max_len, len);
                 break;
             case SCAN:
-                TransactionScan(pkt, len);
+                TransactionScan(pkt, max_len, len);
                 break;
             case READMODIFYWRITE:
-                TransactionReadModifyWrite(pkt, len);
+                TransactionReadModifyWrite(pkt, max_len, len);
                 break;
             default:
                 throw Exception("Operation request is not recognized!");
@@ -175,11 +178,11 @@ public:
     }
 
 protected:
-    virtual void TransactionRead(uint8_t *, int);
-    virtual void TransactionReadModifyWrite(uint8_t *, int);
-    virtual void TransactionScan(uint8_t *, int);
-    virtual void TransactionUpdate(uint8_t *, int);
-    virtual void TransactionInsert(uint8_t *, int);
+    virtual void TransactionRead(uint8_t *, int, int *);
+    virtual void TransactionReadModifyWrite(uint8_t *, int, int *);
+    virtual void TransactionScan(uint8_t *, int, int *);
+    virtual void TransactionUpdate(uint8_t *, int, int *);
+    virtual void TransactionInsert(uint8_t *, int, int *);
 
     static Generator<uint64_t> *GetFieldLenGenerator(const Properties &p);
     std::string BuildKeyName(uint64_t key_num);
@@ -209,15 +212,16 @@ inline std::string DBWorkload::NextTransactionKey() {
     return BuildKeyName(key_num);
 }
 
-inline void DBWorkload::TransactionRead(uint8_t * buf, int len) {
+inline void DBWorkload::TransactionRead(uint8_t * buf, int max_len, int * len) {
     const std::string &key = this->NextTransactionKey();
     struct db_message * msg = (struct db_message *)buf;
 
     // msg->op_code = READ;
     memcpy(msg->key, key.c_str(), key.length());
+    *len = KEY_LENGTH;
 }
 
-inline void DBWorkload::TransactionReadModifyWrite(uint8_t * buf, int len) {
+inline void DBWorkload::TransactionReadModifyWrite(uint8_t * buf, int max_len, int * len) {
     // const std::string &key = this->NextTransactionKey();
     // std::vector<DB::KVPair> result;
 
@@ -238,7 +242,7 @@ inline void DBWorkload::TransactionReadModifyWrite(uint8_t * buf, int len) {
     // return db_.Update(table, key, values);
 }
 
-inline void DBWorkload::TransactionScan(uint8_t * buf, int len) {
+inline void DBWorkload::TransactionScan(uint8_t * buf, int max_len, int * len) {
     // const std::string &key = this->NextTransactionKey();
     // int len = this->NextScanLength();
     // std::vector<std::vector<DB::KVPair>> result;
@@ -251,7 +255,7 @@ inline void DBWorkload::TransactionScan(uint8_t * buf, int len) {
     // }
 }
 
-inline void DBWorkload::TransactionUpdate(uint8_t * buf, int len) {
+inline void DBWorkload::TransactionUpdate(uint8_t * buf, int max_len, int * len) {
     const std::string &key = this->NextTransactionKey();
     const std::string &value = this->BuildValues();
     struct db_message * msg = (struct db_message *)buf;
@@ -259,10 +263,11 @@ inline void DBWorkload::TransactionUpdate(uint8_t * buf, int len) {
     // msg->op_code = UPDATE;
     memcpy(msg->key, key.c_str(), key.length());
     memcpy(msg->value, value.c_str(), value.length());
+    *len = KEY_LENGTH + value.length();
 }
 
 /* Insert is used to preload data */
-inline void DBWorkload::TransactionInsert(uint8_t * buf, int len) {
+inline void DBWorkload::TransactionInsert(uint8_t * buf, int max_len, int * len) {
     const std::string &key = this->NextSequenceKey();
     const std::string &value = this->BuildValues();
     struct db_message * msg = (struct db_message *)buf;
@@ -270,6 +275,7 @@ inline void DBWorkload::TransactionInsert(uint8_t * buf, int len) {
     // msg->op_code = INSERT;
     memcpy(msg->key, key.c_str(), key.length());
     memcpy(msg->value, value.c_str(), value.length());
+    *len = KEY_LENGTH + value.length();
 } 
 
 #endif  /* _DB_WORKLOAD_H_ */

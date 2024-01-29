@@ -12,7 +12,7 @@ struct pkvs_message {
 } __attribute__((__packed__));
 
 void pkvs_client_init(void);
-int pkvs_client_send(Workload *, struct client *, uint8_t *, int);
+int pkvs_client_send(Workload *, struct client *, uint8_t *, int, int *);
 int pkvs_client_recv(Workload *, uint8_t *, uint16_t);
 void pkvs_client_output(Workload *, uint64_t);
 

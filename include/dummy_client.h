@@ -4,7 +4,7 @@
 #include "client.h"
 
 void dummy_client_init(void);
-int dummy_client_send(Workload *, struct client *, uint8_t *, int);
+int dummy_client_send(Workload *, struct client *, uint8_t *, int, int *);
 int dummy_client_recv(Workload *, uint8_t *, uint16_t);
 void dummy_client_output(Workload *, uint64_t);
 

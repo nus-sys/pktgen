@@ -24,10 +24,10 @@ void pkvs_client_init(void) {
     pkvs_latencies = (struct pkvs_ts *)calloc(131072, sizeof(struct pkvs_ts));
 }
 
-int pkvs_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int len) {
+int pkvs_client_send(Workload * wl, struct client * cl, uint8_t * pkt, int max_len, int * len) {
     struct pkvs_message * msg = (struct pkvs_message *)pkt;
     msg->magic = 0x65;
-    msg->op_code = (uint8_t)(wl->GenerateNextReq(pkt + sizeof(struct pkvs_message), len - sizeof(struct pkvs_message)));
+    msg->op_code = (uint8_t)(wl->GenerateNextReq(pkt + sizeof(struct pkvs_message), max_len - sizeof(struct pkvs_message), len));
     msg->req_id = 0x12345678;
     msg->tsc = rdtsc();
 

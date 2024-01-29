@@ -48,7 +48,7 @@ public:
 
     virtual size_t NextServiceTime() { return service_time_generator_->Next(); }
 
-    uint16_t GenerateNextReq(uint8_t * buf, int len) {
+    uint16_t GenerateNextReq(uint8_t * buf, int max_len, int * len) {
         struct syn_message * msg;
         msg = (struct syn_message *)buf;
 
